@@ -1,46 +1,51 @@
 const express = require('express');
-
-const server = require('http').createServer(express);
-
+const server = require('http').createServer();
 const app = express();
+const PORT = 3000;
 
-app.get('/', (req, res) => {
-    res.sendFile('index.html', { root: __dirname });
-})
-
-//server resopnd on request of app
-server.on('request', app);
-
-server.listen(3000, () => {
-    console.log('Server running on port 3000');
+app.get('/', function(req, res) {
+  res.sendFile('index.html', {root: __dirname});
 });
 
-/**Start websockets **/
+server.on('request', app);
+
+server.listen(PORT, function () { console.log('Listening on ' + PORT); });
+
+/** Websocket **/
 const WebSocketServer = require('ws').Server;
 
 const wss = new WebSocketServer({ server: server });
 
-wss.on('connection', (ws) => {
-    const numClients = wss.clients.size;
-    console.log("Clients connected", numClients);
+wss.on('connection', function connection(ws) {
+  const numClients = wss.clients.size;
 
-    wss.broadcast(`Current visitors: ${numClients}`);
+  console.log('clients connected: ', numClients);
 
-    if(ws.readyState === ws.OPEN) open(ws);
+  wss.broadcast(`Current visitors: ${numClients}`);
 
-    ws.on('close', () => {
-        wss.broadcast(`Current visitors: ${numClients}`);
-        console.log('A client disconnected');
-    })
+  if (ws.readyState === ws.OPEN) {
+    ws.send('welcome!');
+  }
 
+  ws.on('close', function close() {
+    wss.broadcast(`Current visitors: ${wss.clients.size}`);
+    console.log('A client has disconnected');
+  });
+
+  ws.on('error', function error() {
+    //
+  });
 });
 
-const open = (ws) =>  {
-    ws.send("Welcome to my server.");
-}
-
-wss.broadcast = (data) => {
-    wss.clients.forEach((client) => {
-        client.send(data);
-    });
-}
+/**
+ * Broadcast data to all connected clients
+ * @param  {Object} data
+ * @void
+ */
+wss.broadcast = function broadcast(data) {
+  console.log('Broadcasting: ', data);
+  wss.clients.forEach(function each(client) {
+    client.send(data);
+  });
+};
+/** End Websocket **/
